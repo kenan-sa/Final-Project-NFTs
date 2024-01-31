@@ -1,7 +1,7 @@
 import React, { useContext, useState } from "react";
 import axios from "axios";
 import { authContext } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -22,7 +22,7 @@ const Login = () => {
         setUser(response.data.user);
         setUserId(response.data.user._id);
         setLoaderHidden(true);
-        nav("/discover");
+        // nav("/discover");
         console.log(response.data);
       }
     } catch (error) {
@@ -68,7 +68,7 @@ const Login = () => {
                 <div>
                   <h3>Welcome, {user.email}!</h3>
                   <p>Your tokens: {user.tokens}</p>
-                  {/* <Link to="/collection">View Collection</Link> */}
+                  <Link to="/collection">View Collection</Link>
                 </div>
               )}
             </div>

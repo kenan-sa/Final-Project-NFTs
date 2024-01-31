@@ -12,8 +12,8 @@ import {
 import { authContext } from "../context/AuthContext";
 
 function Header() {
-  const [userOwnedGallery, setOwnedGallery] = useState();
-  const [listingGallery, setListingGallery] = useState();
+  // const [userOwnedGallery, setOwnedGallery] = useState();
+  // const [listingGallery, setListingGallery] = useState();
   const { userId, setUserId } = useContext(authContext);
   const nav = useNavigate();
 

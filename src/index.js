@@ -9,11 +9,12 @@ import Signup from "./components/Signup";
 import homeImage from "./assets/home-img.png";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import Gallery from "./components/Gallery";
 
 const root = createRoot(document.getElementById("root"));
 const router = createBrowserRouter([
   {
-    index: true,//MAIN PAGE "HOME"
+    index: true, //MAIN PAGE "HOME"
     path: "/",
     element: (
       <>
@@ -48,7 +49,7 @@ const router = createBrowserRouter([
     element: (
       <>
         <Header />
-        <h1>Dicover page</h1>
+        <Gallery role="discover" title="Dicover page" />
         <Footer />
       </>
     ),
@@ -68,7 +69,7 @@ const router = createBrowserRouter([
     element: (
       <>
         <Header />
-        <h1>My collection</h1>
+        <Gallery role="collection" title="My Collection" />
         <Footer />
       </>
     ),

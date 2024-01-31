@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from "react";
+import axios from "axios";
+import React, { useContext, useEffect, useState } from "react";
 import Button from "./Button";
-// import CURRENT_USER_ID from "../index";
-// import PriceLabel from "./PriceLabel";
+import { authContext } from "../context/AuthContext";
+import PriceLabel from "./PriceLabel";
 
 function Item(props) {
-  const [name, setName] = useState();
-  const [owner, setOwner] = useState();
+  const [nftName, setNFTName] = useState();
+  const [nftOwner, setNFTOwner] = useState();
+  const [nftOriginalOwner, setNFTOriginalOwner] = useState();
+  const [nftOwnerId, setNFTOwnerId] = useState();
   const [image, setImage] = useState();
   const [button, setButton] = useState();
   const [priceInput, setPriceInput] = useState();
@@ -15,64 +18,73 @@ function Item(props) {
   const [priceLabel, setPriceLabel] = useState();
   const [shouldDisplay, setDisplay] = useState(true);
 
-  const id = props.id;
+  const { userId, setUserId } = useContext(authContext);
 
-//   const localHost = "http://localhost:8080/";
-//   const agent = new HttpAgent({ host: localHost });
-
-  //TODO: When deploy live, remove the following line.
-//   agent.fetchRootKey();
-  let NFTActor;
+  const nftId = props.id;
 
   async function loadNFT() {
-    // NFTActor = await Actor.createActor(idlFactory, {
-    //   agent,
-    //   canisterId: id,
-    // });
+    //*get the user from the dataBase by the nftID
+    try {
+      const response = await axios.get("http://localhost:3001/owner", {
+        params: {
+          nftId: nftId,
+        },
+      });
 
-    const name = await NFTActor.getName();
-    const owner = await NFTActor.getOwner();
-    const imageData = await NFTActor.getAsset();
-    const imageContent = new Uint8Array(imageData);
-    const image = URL.createObjectURL(
-      new Blob([imageContent.buffer], { type: "image/png" })
-    );
-
-    setName(name);
-    setOwner(owner.toText());
-    setImage(image);
+      // setNFTOriginalOwner(response.data.owner);
+      setNFTOwnerId(response.data.ownerId);
+      setNFTOwner(response.data.owner);
+    } catch (error) {
+      console.error("There is no owner of that nft", error);
+    }
+    setNFTName(props.name);
+    setImage(props.path);
 
     if (props.role == "collection") {
-    //   const nftIsListed = await opend.isListed(props.id);
-
-      if (nftIsListed) {
-        setOwner("OpenD");
+      if (props.status == "listed") {
+        setNFTOwner("CosmoNexus");
         setBlur({ filter: "blur(4px)" });
         setSellStatus("Listed");
-      } else {
+        setButton();
+        setPriceLabel();
+      } else if (props.status == "owned") {
         setButton(<Button handleClick={handleSell} text={"Sell"} />);
       }
     } else if (props.role == "discover") {
-    //   const originalOwner = await opend.getOriginalOwner(props.id);
-    //   if (originalOwner.toText() != CURRENT_USER_ID.toText()) {
-    //     setButton(<Button handleClick={handleBuy} text={"Buy"} />);
-    //   }
-
-    //   const price = await opend.getListedNFTPrice(props.id);
-    //   setPriceLabel(<PriceLabel sellPrice={price.toString()} />);
+      //*get the original owner of the nft to render on the discover page
+      if (nftOwnerId != userId) {
+        setBlur();
+        setSellStatus("");
+        setButton(<Button handleClick={handleBuy} text={"Buy"} />);
+      } else {
+        setBlur();
+        setSellStatus("");
+        setButton();
+      }
+      try {
+        const response = await axios.get("http://localhost:3001/price", {
+          params: {
+            nftId: nftId,
+          },
+        });
+        const price = response.data.price;
+        setPriceLabel(<PriceLabel sellPrice={price.toString()} />);
+      } catch (error) {
+        console.error("There is no nft to that nftId", error);
+      }
     }
   }
 
   useEffect(() => {
     loadNFT();
-  }, []);
+  }, [props.role]);
 
   let price;
   function handleSell() {
     console.log("Sell clicked");
     setPriceInput(
       <input
-        placeholder="Price in DANG"
+        placeholder="Price in KANMURU"
         type="number"
         className="price-input"
         value={price}
@@ -81,27 +93,49 @@ function Item(props) {
     );
     setButton(<Button handleClick={sellItem} text={"Confirm"} />);
   }
-
+  //................................................................................... sell
   async function sellItem() {
     setBlur({ filter: "blur(4px)" });
     setLoaderHidden(false);
     console.log("set price = " + price);
-    // const listingResult = await opend.listItem(props.id, Number(price));
-    // console.log("listing: " + listingResult);
-    // if (listingResult == "Success") {
-    //   const openDId = await opend.getOpenDCanisterID();
-    //   const transferResult = await NFTActor.transferOwnership(openDId);
-    //   console.log("transfer: " + transferResult);
-    //   if (transferResult == "Success") {
-    //     setLoaderHidden(true);
-    //     setButton();
-    //     setPriceInput();
-    //     setOwner("OpenD");
-    //     setSellStatus("Listed");
-    //   }
-    // }
+    // POST REQUEST to set the price of that nftid / nft .
+    try {
+      const response = await axios.post("http://localhost:3001/price", {
+        nftId,
+        price,
+      });
+      const listingMessage = response.data.message;
+      const listingSuccess = response.data.success;
+      console.log("listing: " + listingMessage);
+      if (listingSuccess) {
+        setLoaderHidden(true);
+        setButton();
+        setPriceInput();
+        setNFTOwner("CosmoNexus");
+        setSellStatus("Listed");
+      }
+    } catch (error) {
+      console.error("Error setting price:", error);
+    }
   }
+  // try {
+  //   const response = await axios.post("http://localhost:3001/transfer", {
+  //     senderUserId: userId,
+  //     receiverUserId: nftOwnerId,
+  //     amount: price,
+  //   });
 
+  //   console.log("transfer: " + response.data.message);
+  //   const transferSuccess = response.data.success;
+  //   if (transferSuccess) {
+
+  //       }
+  //     } catch (error) {
+  //       console.error("Error transferring tokens:", error);
+  //     }
+  //   }
+  //
+  //.................................................................................... buy
   async function handleBuy() {
     console.log("Buy was triggered");
     setLoaderHidden(false);
@@ -109,10 +143,8 @@ function Item(props) {
     //   agent,
     //   canisterId: Principal.fromText("<REPLACE WITH YOUR TOKEN CANISTER ID>"),
     // });
-
     // const sellerId = await opend.getOriginalOwner(props.id);
     // const itemPrice = await opend.getListedNFTPrice(props.id);
-
     // const result = await tokenActor.transfer(sellerId, itemPrice);
     // if (result == "Success") {
     //   const transferResult = await opend.completePurchase(
@@ -120,9 +152,9 @@ function Item(props) {
     //     sellerId,
     //     CURRENT_USER_ID
     //   );
-      console.log("purchase: " + transferResult);
-      setLoaderHidden(true);
-      setDisplay(false);
+    // console.log("purchase: " + transferResult);
+    setLoaderHidden(true);
+    setDisplay(false);
     // }
   }
 
@@ -136,6 +168,7 @@ function Item(props) {
           className="disCardMedia-root makeStyles-image-19 disCardMedia-media disCardMedia-img"
           src={image}
           style={blur}
+          onError={(e) => console.error("Error loading image:", e)}
         />
         <div className="lds-ellipsis" hidden={loaderHidden}>
           <div></div>
@@ -146,11 +179,11 @@ function Item(props) {
         <div className="disCardContent-root">
           {priceLabel}
           <h2 className="disTypography-root makeStyles-bodyText-24 disTypography-h5 disTypography-gutterBottom">
-            {name}
+            {nftName}
             <span className="purple-text"> {sellStatus}</span>
           </h2>
           <p className="disTypography-root makeStyles-bodyText-24 disTypography-body2 disTypography-colorTextSecondary">
-            Owner: {owner}
+            Owner: {nftOwner}
           </p>
           {priceInput}
           {button}
