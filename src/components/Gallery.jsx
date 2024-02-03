@@ -8,7 +8,7 @@ function Gallery(props) {
   const { userId, setUserId } = useContext(authContext);
 
   async function fetchNFTs() {
-    if (props.role == "collection") {
+    if (props.role == "collection" && userId) {
       try {
         const response = await axios.get("http://localhost:3001/nfts", {
           params: {

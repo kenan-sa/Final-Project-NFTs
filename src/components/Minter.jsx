@@ -1,8 +1,6 @@
 import axios from "axios";
 import React, { useState, useRef, useContext } from "react";
 import { authContext } from "../context/AuthContext";
-// import { useFormState } from "react-hook-form";
-// import { useFormStatus } from "react-dom";
 import Item from "./Item";
 
 function Minter() {
@@ -28,8 +26,11 @@ function Minter() {
     });
     setNFTID(response.data.nftId);
     setNFTPath(response.data.path);
-    console.log(nftPath);
     setLoaderHidden(true);
+  }
+  async function mintMore() {
+    setNFTID("");
+    setNFTPath("");
   }
 
   if (nftID === "") {
@@ -86,6 +87,11 @@ function Minter() {
         </h3>
         <div className="horizontal-center">
           <Item id={nftID} name={nameRef.current.value} path={nftPath} />
+          <div className="form-ButtonBase-root form-Chip-root makeStyles-chipBlue-108 form-Chip-clickable">
+            <span onClick={mintMore} className="form-Chip-label">
+              Mint More
+            </span>
+          </div>
         </div>
       </div>
     );

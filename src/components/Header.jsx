@@ -12,8 +12,6 @@ import {
 import { authContext } from "../context/AuthContext";
 
 function Header() {
-  // const [userOwnedGallery, setOwnedGallery] = useState();
-  // const [listingGallery, setListingGallery] = useState();
   const { userId, setUserId } = useContext(authContext);
   const nav = useNavigate();
 
@@ -28,12 +26,14 @@ function Header() {
         <div className="Toolbar-root Toolbar-regular header-appBar-13 Toolbar-gutters">
           <div className="header-left-4"></div>
           <img className="header-logo-11" src={logo} />
-          <div className="header-vertical-9"></div>
+          <div className="header-vertical-9 "></div>
           <Link to="/">
             <h5 className="Typography-root header-logo-text">CosmoNexus</h5>
+            <div className="media-greaterThanOrEqual-md"></div>
           </Link>
           <div className="header-empty-6"></div>
           <div className="header-space-8"></div>
+
           {userId && (
             <button
               className="ButtonBase-root Button-root Button-text header-navButtons-3"

@@ -181,26 +181,28 @@ async function main() {
       res.status(500).json(err);
     }
   });
-  //............................................................listed
+  //............................................................listedNFTs
   app.get("/all-listed-nfts", async (req, res) => {
     try {
       // Fetch all users with listed NFTs from the database
       const usersWithListedNFTs = await User.find({ "nfts.status": "listed" });
-  
+
       // Extract and concatenate the listed NFTs from each user
       const allListedNFTs = usersWithListedNFTs.reduce((accumulator, user) => {
-        const userListedNFTs = user.nfts.filter((nft) => nft.status === "listed");
+        const userListedNFTs = user.nfts.filter(
+          (nft) => nft.status === "listed"
+        );
         return accumulator.concat(userListedNFTs);
       }, []);
-  
+
       res.json({ listedNFTs: allListedNFTs });
     } catch (error) {
       console.error("Error fetching listed NFTs:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
-  
-  //................................................................. owned
+
+  //................................................................. ownedNFTs
   app.get("/owned", async (req, res) => {
     const userId = req.query.userId;
 
@@ -269,69 +271,101 @@ async function main() {
       res.status(500).json({ error: "Internal server error" });
     }
   });
-//................................................................ set the new price
-app.post("/price", async (req, res) => {
-  const { nftId, price } = req.body;
+  //................................................................ get Tokens
+  app.get("/tokens", async (req, res) => {
+    const userId = req.query.userId;
 
-  try {
-    const user = await User.findOne({ "nfts.nftId": nftId });
+    try {
+      const user = await User.findById(userId);
 
-    if (!user) {
-      return res.status(404).json({ error: "NFT not found" });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user.tokens);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json(err);
     }
+  });
+  //................................................................ set the price of the NFT that wanted to list
+  app.post("/price", async (req, res) => {
+    const { nftId, price } = req.body;
 
-    const nft = user.nfts.find((nft) => nft.nftId === nftId);
+    try {
+      const user = await User.findOne({ "nfts.nftId": nftId });
 
-    if (!nft) {
-      return res.status(404).json({ error: "NFT not found" });
+      if (!user) {
+        return res.status(404).json({ error: "NFT not found" });
+      }
+
+      const nft = user.nfts.find((nft) => nft.nftId === nftId);
+
+      if (!nft) {
+        return res.status(404).json({ error: "NFT not found" });
+      }
+
+      // Update the price of the NFT
+      nft.price = price;
+      nft.status = "listed";
+
+      // Save the updated user to the database
+      await user.save();
+
+      res.json({
+        success: true,
+        message: "Price set successfully and the NFT is listed for sale",
+      });
+    } catch (error) {
+      console.error("Error setting price:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
+  });
+  //............................................................... Transfer
+  app.post("/transfer", async (req, res) => {
+    const { senderUserId, receiverUserId, nftId } = req.body;
 
-    // Update the price of the NFT
-    nft.price = price;
-    nft.status="listed";
+    try {
+      // Fetch sender and receiver users from the database
+      const senderUser = await User.findById(senderUserId);
+      const receiverUser = await User.findById(receiverUserId);
 
-    // Save the updated user to the database
-    await user.save();
+      if (!senderUser || !receiverUser) {
+        console.log("User not found");
+        return res.status(404).json({ error: "User not found" });
+      }
+      //get the wanted nft from the receiverUser
+      const wantedNFT = receiverUser.nfts.find((nft) => nft.nftId === nftId);
 
-    res.json({ success: true, message: "Price set successfully and the NFT is listed for sale" });
-  } catch (error) {
-    console.error("Error setting price:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-//............................................................... Transfer
-app.post("/transfer", async (req, res) => {
-  const { senderUserId, receiverUserId, amount } = req.body;
+      if (!wantedNFT) {
+        console.log("NFT not found");
+        return res.status(404).json({ error: "NFT not found" });
+      }
 
-  try {
-    // Fetch sender and receiver users from the database
-    const senderUser = await User.findById(senderUserId);
-    const receiverUser = await User.findById(receiverUserId);
+      // Check if the sender has enough tokens
+      if (senderUser.tokens < wantedNFT.price) {
+        return res.status(400).json({ error: "Insufficient funds" });
+      }
 
-    if (!senderUser || !receiverUser) {
-      return res.status(404).json({ error: "User not found" });
+      // Update token balances
+      senderUser.tokens -= wantedNFT.price;
+      receiverUser.tokens += wantedNFT.price;
+      wantedNFT.status = "owned";
+      wantedNFT.price = 0;
+      receiverUser.nfts = receiverUser.nfts.filter(
+        (nft) => nft.nftId !== nftId
+      );
+      senderUser.nfts.push(wantedNFT);
+
+      // Save the updated users to the database
+      await senderUser.save();
+      await receiverUser.save();
+
+      res.json({ success: true, message: "Tokens transferred successfully" });
+    } catch (error) {
+      console.error("Error transferring tokens:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
-
-    // Check if the sender has enough tokens
-    if (senderUser.tokens < amount) {
-      return res.status(400).json({ error: "Insufficient funds" });
-    }
-
-    // Update token balances
-    senderUser.tokens -= amount;
-    receiverUser.tokens += amount;
-
-    // Save the updated users to the database
-    await senderUser.save();
-    await receiverUser.save();
-
-    res.json({ success: true, message: "Tokens transferred successfully" });
-  } catch (error) {
-    console.error("Error transferring tokens:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
+  });
 
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

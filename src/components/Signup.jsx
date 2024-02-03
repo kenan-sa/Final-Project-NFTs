@@ -38,7 +38,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="container mt-5">
+    <div className="signInContainer">
       {!userId && (
         <>
           <div hidden={loaderHidden} className="lds-ellipsis">
@@ -47,33 +47,31 @@ const Signup = () => {
             <div></div>
             <div></div>
           </div>
-          <h2>Registration</h2>
-          <div className="row">
-            <div className="col-sm-8">
-              <div className="card">
-                <div className="card-body">
-                  <label>Email: </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
-                    className="form-control"
-                  />
-                  <br />
-                  <label>Password: </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
-                    className="form-control"
-                  />
-                  <br />
-                  <button onClick={handleRegister} className="btn btn-dark">
-                    Register
-                  </button>
-                </div>
+          <h2 className="text-white">Registration</h2>
+          <div className="col-sm-4">
+            <div className="card">
+              <div className="card-body">
+                <label>Email: </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  className="form-control"
+                />
+                <br />
+                <label>Password: </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="form-control"
+                />
+                <br />
+                <button onClick={handleRegister} className="btn btn-dark">
+                  Register
+                </button>
               </div>
             </div>
           </div>
