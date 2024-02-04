@@ -1,5 +1,7 @@
 require("dotenv").config();
 const express = require("express");
+const http = require("http");
+const socketIo = require("socket.io");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -21,6 +23,13 @@ const upload = multer({ storage: storage });
 
 async function main() {
   const app = express();
+  const server = http.createServer(app);
+  const io = socketIo(server, {
+    cors: {
+      origin: "http://localhost:3000", // Adjust the origin to match your React app's URL
+      methods: ["GET", "POST"],
+    },
+  });
 
   app.use(express.static("public"));
   app.use("/uploads", express.static("uploads"));
@@ -29,7 +38,13 @@ async function main() {
 
   app.use(bodyParser.json()); // express now has one
   app.use(bodyParser.urlencoded({ extended: true }));
-  app.use(cors());
+  app.use(
+    cors({
+      origin: "http://localhost:3000", // Adjust the origin to match your React app's URL
+      methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+      credentials: true,
+    })
+  );
 
   // Connect to MongoDB
   try {
@@ -54,6 +69,32 @@ async function main() {
   });
 
   const User = new mongoose.model("User", userSchema);
+
+  //.......................................................... WebSocket logic
+  io.on("connection", (socket) => {
+    console.log("A user connected");
+    // Example: Send initial tokens to the client
+    socket.on("initialTokens", async (userId) => {
+      if (userId) {
+        const user = await User.findById(userId);
+        if (user) {
+          socket.emit("updateTokens", user.tokens);
+        }
+      }
+    });
+
+    // Example: Listen for changes in tokens
+    socket.on("tokenUpdate", async (userId) => {
+      const user = await User.findById(userId);
+      if (user) {
+        io.emit("updateTokens", user.tokens);
+      }
+    });
+
+    socket.on("disconnect", () => {
+      console.log("User disconnected");
+    });
+  });
 
   app.get("/", (req, res) => {
     res.send("Hello, this is your Express server!");
@@ -115,8 +156,6 @@ async function main() {
       const user = await User.findOne({ email });
 
       if (user) {
-        console.log("Provided password:", password);
-        console.log("Stored password:", user.password);
         // Compare the provided password with the stored password in the database
         if (password === user.password) {
           res.json({
@@ -366,10 +405,12 @@ async function main() {
       res.status(500).json({ error: "Internal server error" });
     }
   });
-
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
+  // app.listen(PORT, () => {
+  //   console.log(`Server is running on port ${PORT}`);
+  // });
 }
 console.clear();
 main().catch((err) => {
